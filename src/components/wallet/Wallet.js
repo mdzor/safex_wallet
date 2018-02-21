@@ -4,7 +4,7 @@ var fileDownload = require('react-file-download');
 var fs = window.require('fs');
 var os = window.require('os');
 var bs58 = require('bs58');
-var bitcoin = window.require('bitcoinjs-lib');
+var bitcoin = require('bitcoinjs-lib');
 var bitcore = window.require('bitcore-lib');
 import {toHexString, encrypt, safexPayload, decrypt} from '../../utils/utils';
 import {genkey} from '../../utils/keys';
@@ -400,23 +400,52 @@ export default class Wallet extends React.Component {
         var running_total = 0;
         var tx = new bitcoin.TransactionBuilder();
         var inputs_num = 0;
-        utxos.forEach(txn => {
 
-            if (running_total < (2730 + fee)) {
+        // here we list btc tx from our wallet, remove 700sats, put back (the rest - fee) to ourself
+        utxos.forEach(txn => {
+            if (running_total < (700 + fee)) {
                 running_total += txn.satoshis;
                 tx.addInput(txn.txid, txn.vout);
                 inputs_num += 1;
             }
         });
-        tx.addOutput(destination, 2730);
+        tx.addOutput(destination, 700);
 
-        if ((running_total - (2730 + fee)) > 0) {
-            tx.addOutput(source, (running_total - (2730 + fee)));
+        var btc_remaining = (running_total - (700 + fee));
+        if (btc_remaining > 0) {
+            tx.addOutput(source, btc_remaining);
         }
 
-        var SafexTransaction = {};
-        SafexTransaction['incomplete_tx'] = tx.buildIncomplete().toHex();
-        SafexTransaction['amount'] = amount;
+        var btc = require('bitcoinjs-lib');
+        if (amount <= 0.1) {
+            alert("Transaction not processed - Amount is too low. ")
+            return;
+        }
+
+        // payload omni tx
+        var data = new Buffer("0000000000000056" + String("0000000000000000" + amount).slice(-16));
+        var dataScript = btc.script.nullData.output.encode(data);
+        tx.addOutput(dataScript, 1000)
+
+        for (var i = 0; i < inputs_num; i++) {
+            tx.sign(i, key);
+        }
+        var json = {};
+        json['rawtx'] = tx.build().toHex();
+
+        fetch('http://omni.safex.io:3001/broadcast', {method: "POST", body: JSON.stringify(json)})
+            .then(resp => resp.text())
+            .then((resp) => {
+
+                this.setState({
+                    transaction_sent: true,
+                    transaction_being_sent: false,
+                    txid: resp
+                });
+            });
+
+
+        /*
         fetch('http://omni.safex.io:3001/getsafextxn', {method: "POST", body: JSON.stringify(SafexTransaction)})
             .then(resp => resp.text())
             .then((resp) => {
@@ -461,7 +490,7 @@ export default class Wallet extends React.Component {
                     alert("error with transaction")
                 }
 
-            });
+            });*/
 
     }
 
@@ -671,7 +700,6 @@ export default class Wallet extends React.Component {
                     send_public_key: ''
                 });
             }
-
         }
         if (sendreceive === 'receive') {
             if (!this.state.collapse_open.receive_open && this.state.collapse_open.key !== key || this.state.collapse_open.receive_open && this.state.collapse_open.key !== key) {
@@ -897,10 +925,11 @@ export default class Wallet extends React.Component {
 
     //This is protection against way too small fees
     sendFeeOnBlur(e) {
-        if (this.state.send_fee <= 0.00005) {
-            var send_fee = 0.00005;
+        var send_fee;
+        if (this.state.send_fee <= 0.00001) {
+            send_fee = 0.00001;
         } else {
-            var send_fee = this.state.send_fee;
+            send_fee = this.state.send_fee;
         }
         this.setState({
             send_fee: send_fee
