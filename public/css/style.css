@@ -294,6 +294,12 @@ body{
   padding:5px;
   white-space: nowrap;
 }
+.single-key .amounts > div.amounts {
+  margin-left: 0px
+}
+.single-key .amounts > button.history-button > span{
+  margin-top: 25px;
+}
 .single-key .amounts > span > span{
   color:#00d1ff;
   width: calc(50% - 30px);
@@ -531,6 +537,30 @@ body{
 .explorer th{
   padding:8px;
 }
+
+.overflow.historyModal {
+  background:rgba(1, 30, 44, 1);
+  color:#54C4F8;
+  position: absolute;
+  top: 80px;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  transition: all 0.4s;
+  opacity:0;
+  z-index:-9999;
+}
+
+.overflow.historyModal.active{
+  opacity:1;
+  z-index:9999;
+}
+
+.overflow.historyModal p {
+  color:#54C4F8;
+}
+
 .overflow.sendModal{
     position: absolute;
     top: 80px;
@@ -774,6 +804,11 @@ input::-webkit-inner-spin-button {
 }
 .sendCloseButton{
   padding-bottom:5px;
+}
+.historyModal .close {
+  color:#f00;
+  opacity: 0.8;
+  font-size: 20px;
 }
 .sendCloseButton .close{
   color:#f00;

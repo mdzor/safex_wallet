@@ -32,6 +32,7 @@ export default class Wallet extends React.Component {
             send_fee: 0.0001,
             send_total: 1,
             send_overflow_active: false,
+            history_overflow_active: false,
             send_to: '',
             send_keys: {
                 public_key: '',
@@ -69,6 +70,8 @@ export default class Wallet extends React.Component {
         this.prepareDisplayPendingTx = this.prepareDisplayPendingTx.bind(this);
         this.openCoinModal = this.openCoinModal.bind(this);
         this.closeCoinModal = this.closeCoinModal.bind(this);
+        this.openHistoryModal = this.openHistoryModal.bind(this);
+        this.closeHistoryModal = this.closeHistoryModal.bind(this);
         this.sendAmountOnChange = this.sendAmountOnChange.bind(this);
         this.sendFeeOnChange = this.sendFeeOnChange.bind(this);
         this.sendFeeOnBlur = this.sendFeeOnBlur.bind(this);
@@ -432,7 +435,6 @@ export default class Wallet extends React.Component {
         }
         var json = {};
         json['rawtx'] = tx.build().toHex();
-
         fetch('http://omni.safex.io:3001/broadcast', {method: "POST", body: JSON.stringify(json)})
             .then(resp => resp.text())
             .then((resp) => {
@@ -443,7 +445,6 @@ export default class Wallet extends React.Component {
                     txid: resp
                 });
             });
-
 
         /*
         fetch('http://omni.safex.io:3001/getsafextxn', {method: "POST", body: JSON.stringify(SafexTransaction)})
@@ -723,6 +724,11 @@ export default class Wallet extends React.Component {
         }
     }
 
+    openHistoryModal(e) {
+        this.setState({
+            history_overflow_active: true,
+        })
+    }
 
     //Activates send_overflow_active state which opens Modal screen displaying transaction pre-confirmation information
     openCoinModal(e) {
@@ -854,6 +860,12 @@ export default class Wallet extends React.Component {
                 public_key: '',
                 private_key: ''
             }
+        })
+    }
+
+    closeHistoryModal() {
+        this.setState({
+            history_overflow_active: false
         })
     }
 
@@ -1149,25 +1161,32 @@ export default class Wallet extends React.Component {
 
                 <div className="col-xs-12">
                     <div className="row amounts">
-
-                        <button onClick={() => this.sendToArchive(key)}
-                                className={keys[key].archived === false
-                                | (!keys[key].hasOwnProperty('archived') && archive_active === false)
-                                    ? 'col-xs-2 archive-button'
-                                    : 'col-xs-2 archive-button hidden-xs hidden-sm hidden-md hidden-lg'}>
-                            <span>TO ARCHIVE</span>
-                        </button>
-
-                        <button onClick={() => this.removeFromArchive(key)}
-                                className={keys[key].archived === true
-                                | (!keys[key].hasOwnProperty('archived') && archive_active === true)
-                                    ? 'col-xs-2 archive-button'
-                                    : 'col-xs-2 archive-button hidden-xs hidden-sm hidden-md hidden-lg'}>
-                            <span>TO HOME</span>
-                        </button>
+                        
+                        <div className="row amounts">
+                            <button onClick={() => this.sendToArchive(key)}
+                                    className={keys[key].archived === false
+                                    | (!keys[key].hasOwnProperty('archived') && archive_active === false)
+                                        ? 'archive-button'
+                                        : 'archive-button hidden-xs hidden-sm hidden-md hidden-lg'}>
+                                <span>TO ARCHIVE</span>
+                            </button>
+                            <button onClick={() => this.openHistoryModal()}
+                                    className='archive-button history-button'>
+                                <span>HISTORY</span>
+                            </button>
 
 
-                        <div className="col-xs-10 amounts">
+                            <button onClick={() => this.removeFromArchive(key)}
+                                    className={keys[key].archived === true
+                                    | (!keys[key].hasOwnProperty('archived') && archive_active === true)
+                                        ? 'archive-button'
+                                        : 'archive-button hidden-xs hidden-sm hidden-md hidden-lg'}>
+                                <span>TO HOME</span>
+                            </button>
+                        </div>
+
+
+                        <div className="col-xs-12 amounts">
                             <span className="col-xs-12 amount">
                                 <span>
                                     {
@@ -1186,7 +1205,7 @@ export default class Wallet extends React.Component {
                                 </span>
                             </span>
                         </div>
-                        <div className="col-xs-10 amounts">
+                        <div className="col-xs-12 amounts">
                             <span className="col-xs-12 amount">
                                 <span>
                                     {
@@ -1360,6 +1379,19 @@ export default class Wallet extends React.Component {
                         </div>
                     </div>
                 </div>
+                <div className={this.state.history_overflow_active
+                    ? 'overflow historyModal active'
+                    : 'overflow historyModal'}>
+                    <div className="col-xs-12">
+                        <h3>History <span className="close" onClick={this.closeHistoryModal}>X</span></h3>
+                        <div className="col-xs-10 col-xs-offset-1">
+                            <div className="col-xs-12">
+                                work in progress...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div className={this.state.send_overflow_active
                     ? 'overflow sendModal active'
                     : 'overflow sendModal'}>
