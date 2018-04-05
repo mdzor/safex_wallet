@@ -1,4 +1,5 @@
 import React from 'react';
+import axios from 'axios';
 
 var fileDownload = require('react-file-download');
 var fs = window.require('fs');
@@ -33,6 +34,7 @@ export default class Wallet extends React.Component {
             send_total: 1,
             send_overflow_active: false,
             history_overflow_active: false,
+            history_key: '',
             send_to: '',
             send_keys: {
                 public_key: '',
@@ -87,6 +89,7 @@ export default class Wallet extends React.Component {
         this.closeSettingsModal = this.closeSettingsModal.bind(this);
         this.changePassword = this.changePassword.bind(this);
         this.logout = this.logout.bind(this);
+        this.listTransactions = this.listTransactions.bind(this);
         this.sendToArchive = this.sendToArchive.bind(this);
         this.setArchiveView = this.setArchiveView.bind(this);
         this.setHomeView = this.setHomeView.bind(this);
@@ -399,6 +402,7 @@ export default class Wallet extends React.Component {
             });
     }
 
+    //TODO: more testing.
     formSafexTransaction(utxos, amount, fee, destination, key, source) {
         var running_total = 0;
         var tx = new bitcoin.TransactionBuilder();
@@ -446,55 +450,55 @@ export default class Wallet extends React.Component {
                 });
             });
 
-        /*
-        fetch('http://omni.safex.io:3001/getsafextxn', {method: "POST", body: JSON.stringify(SafexTransaction)})
-            .then(resp => resp.text())
-            .then((resp) => {
-                var decoded_txn = bitcoin.Transaction.fromHex(resp);
-                var txn = bitcoin.TransactionBuilder.fromTransaction(decoded_txn);
-                var check = 0;
-
-                txn.tx.outs.forEach(out => {
-                    if (check === 0) {
-                        var pubkey = bitcoin.address.fromOutputScript(out.script, bitcoin.networks.livenet);
-                        if (pubkey === destination) {
-                            check += 1;
+            /*
+            fetch('http://omni.safex.io:3001/getsafextxn', {method: "POST", body: JSON.stringify(SafexTransaction)})
+                .then(resp => resp.text())
+                .then((resp) => {
+                    var decoded_txn = bitcoin.Transaction.fromHex(resp);
+                    var txn = bitcoin.TransactionBuilder.fromTransaction(decoded_txn);
+                    var check = 0;
+    
+                    txn.tx.outs.forEach(out => {
+                        if (check === 0) {
+                            var pubkey = bitcoin.address.fromOutputScript(out.script, bitcoin.networks.livenet);
+                            if (pubkey === destination) {
+                                check += 1;
+                            }
+                        } else if (check === 1) {
+                            var pubkey = bitcoin.address.fromOutputScript(out.script, bitcoin.networks.livenet);
+                            if (pubkey === source) {
+                                check += 1;
+                            }
                         }
-                    } else if (check === 1) {
-                        var pubkey = bitcoin.address.fromOutputScript(out.script, bitcoin.networks.livenet);
-                        if (pubkey === source) {
-                            check += 1;
+                    });
+    
+                    if (check === 2) {
+                        for (var i = 0; i < inputs_num; i++) {
+                            txn.sign(i, key);
                         }
+    
+    
+                        var json = {};
+                        json['rawtx'] = txn.build().toHex();
+    
+                        fetch('http://omni.safex.io:3001/broadcast', {method: "POST", body: JSON.stringify(json)})
+                            .then(resp => resp.text())
+                            .then((resp) => {
+    
+                                this.setState({
+                                    transaction_sent: true,
+                                    transaction_being_sent: false,
+                                    txid: resp
+                                });
+                            })
+                    } else {
+                        alert("error with transaction")
                     }
-                });
+    
+                });*/
 
-                if (check === 2) {
-                    for (var i = 0; i < inputs_num; i++) {
-                        txn.sign(i, key);
-                    }
-
-
-                    var json = {};
-                    json['rawtx'] = txn.build().toHex();
-
-                    fetch('http://omni.safex.io:3001/broadcast', {method: "POST", body: JSON.stringify(json)})
-                        .then(resp => resp.text())
-                        .then((resp) => {
-
-                            this.setState({
-                                transaction_sent: true,
-                                transaction_being_sent: false,
-                                txid: resp
-                            });
-                        })
-                } else {
-                    alert("error with transaction")
-                }
-
-            });*/
-
-    }
-
+        }
+    
 
     createKey() {
         this.setState({is_loading: true});
@@ -725,9 +729,11 @@ export default class Wallet extends React.Component {
     }
 
     openHistoryModal(e) {
+        document.getElementById("history_txs").innerHTML = "loading...";
         this.setState({
             history_overflow_active: true,
         })
+        this.listTransactions(this.state.keys[e].public_key);
     }
 
     //Activates send_overflow_active state which opens Modal screen displaying transaction pre-confirmation information
@@ -865,7 +871,8 @@ export default class Wallet extends React.Component {
 
     closeHistoryModal() {
         this.setState({
-            history_overflow_active: false
+            history_overflow_active: false,
+            history_key: ''
         })
     }
 
@@ -1034,6 +1041,45 @@ export default class Wallet extends React.Component {
         }
     }
 
+    listTransactions(key) {
+        var render = '';
+        var bodyFormData = new FormData();
+        bodyFormData.set('addr', key);
+
+        axios({
+            method: 'post',
+            url: 'https://api.omniexplorer.info/v1/transaction/address/0',
+            data: bodyFormData,
+            config: { 
+                headers: {'Content-Type': 'multipart/form-data', 'origin': '', 'referrer': '', 'referer': ''}
+            }
+        })
+          .then(function (response) {
+            localStorage.setItem("history_txs", JSON.stringify(response.data.transactions));
+            var history = JSON.stringify(response.data.transactions);
+            var render = '';
+                JSON.parse(history).forEach((tx) => {
+                    var direction = tx['referenceaddress'] === key ? "Received🔸" : "SENT🔻";
+                    var dateTime = new Date(tx['blocktime'] * 1000);
+                    var confirmations = tx['confirmations'] > 15 ? "(16/16)" : "("+ tx['confirmations'] + "/16)"
+                    render +=`
+                        <div className="col-xs-10 history" style="min-width:650px;margin-left:70px;">
+                            <span className="coin-name">SAFEX</span> `+ direction +` <pre class="date">` + dateTime + `</pre><br />
+                            <pre class="address"><b>TX</b> `+ tx['txid'] +`</pre><br /> 
+                            <pre class="address">`+ tx['sendingaddress'] +`</pre> ➡ <pre class="address">`+ tx['referenceaddress'] +`</pre>
+                        </div>
+                        <div className="col-xs-2">
+                            `+ tx['amount'] +` safex <br />
+                            `+ confirmations +` confirmations
+                        </div>`;
+                });
+                document.getElementById("history_txs").innerHTML = render; 
+            })
+          .catch(function (error) {
+            console.log(error);
+            alert("Could not fetch tx history...");
+          });
+    }
 
     sendToArchive(index) {
         try {
@@ -1170,7 +1216,7 @@ export default class Wallet extends React.Component {
                                         : 'archive-button hidden-xs hidden-sm hidden-md hidden-lg'}>
                                 <span>TO ARCHIVE</span>
                             </button>
-                            <button onClick={() => this.openHistoryModal()}
+                            <button onClick={() => this.openHistoryModal(key)}
                                     className='archive-button history-button'>
                                 <span>HISTORY</span>
                             </button>
@@ -1384,11 +1430,9 @@ export default class Wallet extends React.Component {
                     : 'overflow historyModal'}>
                     <div className="col-xs-12">
                         <h3>History <span className="close" onClick={this.closeHistoryModal}>X</span></h3>
-                        <div className="col-xs-10 col-xs-offset-1">
-                            <div className="col-xs-12">
-                                work in progress...
+                            <div className="col-xs-12" id="history_txs">
+                            loading...
                             </div>
-                        </div>
                     </div>
                 </div>
 

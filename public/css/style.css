@@ -317,6 +317,16 @@ body{
   width:80px;
   text-align:center;
 }
+.single-key .amounts > span > span.coin-name{
+  color: #fff;
+  background: url('../images/prelaz.png');
+  margin-left: 10px;
+  margin-right: 10px;
+  padding-left: 5px;
+  padding-right: 5px;
+  width:80px;
+  text-align:center;
+}
 .single-key .pull-right button, .key-buttons button, .form-send button, .form-send .fee-buttons span, .overflow.sendModal button, .overflow.sendModal p{
   border:1px solid #327A9B;
   border-radius: 0px;
@@ -545,7 +555,8 @@ body{
   top: 80px;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: 90%;
+  overflow-y: auto;
   display: flex;
   transition: all 0.4s;
   opacity:0;
@@ -822,4 +833,38 @@ input::-webkit-inner-spin-button {
 }
 .version-number{
   color:#fff;
+}
+
+#history_txs {
+  height:100%;
+  text-align: center;
+}
+
+#history_txs > div {
+  border: 1px solid #00C9FF;
+  border-radius: 2px;
+  margin-bottom: 8px;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 8px;
+  height:85px;
+}
+#history_txs > div{
+  text-align: left;
+  float: left;
+}
+
+#history_txs > div > pre {
+  display: inline;
+  padding: 2px;
+  font-size: 10px;
+  background-color: #cbf6ff;
+  border-radius: 5px;
+  opacity: 0.8;
+}
+
+#history_txs > div > pre:first-of-type {
+  font-style: italic;
+  background-color: #000;
+  border: 0px;
+  color: #0f0;
 }
