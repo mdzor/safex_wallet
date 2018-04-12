@@ -402,8 +402,77 @@ export default class Wallet extends React.Component {
             });
     }
 
-    //TODO: more testing.
+
     formSafexTransaction(utxos, amount, fee, destination, key, source) {
+        var running_total = 0;
+        var tx = new bitcoin.TransactionBuilder();
+        var inputs_num = 0;
+        utxos.forEach(txn => {
+
+            if (running_total < (100 + fee)) {
+                running_total += txn.satoshis;
+                tx.addInput(txn.txid, txn.vout);
+                inputs_num += 1;
+            }
+        });
+        tx.addOutput(destination, 2730);
+
+        if ((running_total - (2730 + fee)) > 0) {
+            tx.addOutput(source, (running_total - (2730 + fee)));
+        }
+
+        var SafexTransaction = {};
+        SafexTransaction['incomplete_tx'] = tx.buildIncomplete().toHex();
+        SafexTransaction['amount'] = amount;
+        fetch('http://omni.safex.io:3001/getsafextxn', {method: "POST", body: JSON.stringify(SafexTransaction)})
+            .then(resp => resp.text())
+            .then((resp) => {
+                var decoded_txn = bitcoin.Transaction.fromHex(resp);
+                var txn = bitcoin.TransactionBuilder.fromTransaction(decoded_txn);
+                var check = 0;
+
+                txn.tx.outs.forEach(out => {
+                    if (check === 0) {
+                        var pubkey = bitcoin.address.fromOutputScript(out.script, bitcoin.networks.livenet);
+                        if (pubkey === destination) {
+                            check += 1;
+                        }
+                    } else if (check === 1) {
+                        var pubkey = bitcoin.address.fromOutputScript(out.script, bitcoin.networks.livenet);
+                        if (pubkey === source) {
+                            check += 1;
+                        }
+                    }
+                });
+
+                if (check === 2) {
+                    for (var i = 0; i < inputs_num; i++) {
+                        txn.sign(i, key);
+                    }
+
+
+                    var json = {};
+                    json['rawtx'] = txn.build().toHex();
+
+                    fetch('http://omni.safex.io:3001/broadcast', {method: "POST", body: JSON.stringify(json)})
+                        .then(resp => resp.text())
+                        .then((resp) => {
+
+                            this.setState({
+                                transaction_sent: true,
+                                transaction_being_sent: false,
+                                txid: resp
+                            });
+                        })
+                } else {
+                    alert("error with transaction")
+                }
+
+            });
+    }
+
+    //TODO: needs more testing - safex not sent
+    formSafexTransactionBeta(utxos, amount, fee, destination, key, source) {
         var running_total = 0;
         var tx = new bitcoin.TransactionBuilder();
         var inputs_num = 0;
@@ -449,54 +518,6 @@ export default class Wallet extends React.Component {
                     txid: resp
                 });
             });
-
-            /*
-            fetch('http://omni.safex.io:3001/getsafextxn', {method: "POST", body: JSON.stringify(SafexTransaction)})
-                .then(resp => resp.text())
-                .then((resp) => {
-                    var decoded_txn = bitcoin.Transaction.fromHex(resp);
-                    var txn = bitcoin.TransactionBuilder.fromTransaction(decoded_txn);
-                    var check = 0;
-    
-                    txn.tx.outs.forEach(out => {
-                        if (check === 0) {
-                            var pubkey = bitcoin.address.fromOutputScript(out.script, bitcoin.networks.livenet);
-                            if (pubkey === destination) {
-                                check += 1;
-                            }
-                        } else if (check === 1) {
-                            var pubkey = bitcoin.address.fromOutputScript(out.script, bitcoin.networks.livenet);
-                            if (pubkey === source) {
-                                check += 1;
-                            }
-                        }
-                    });
-    
-                    if (check === 2) {
-                        for (var i = 0; i < inputs_num; i++) {
-                            txn.sign(i, key);
-                        }
-    
-    
-                        var json = {};
-                        json['rawtx'] = txn.build().toHex();
-    
-                        fetch('http://omni.safex.io:3001/broadcast', {method: "POST", body: JSON.stringify(json)})
-                            .then(resp => resp.text())
-                            .then((resp) => {
-    
-                                this.setState({
-                                    transaction_sent: true,
-                                    transaction_being_sent: false,
-                                    txid: resp
-                                });
-                            })
-                    } else {
-                        alert("error with transaction")
-                    }
-    
-                });*/
-
         }
     
 
