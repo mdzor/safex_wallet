@@ -407,6 +407,9 @@ export default class Wallet extends React.Component {
         var running_total = 0;
         var tx = new bitcoin.TransactionBuilder();
         var inputs_num = 0;
+        var check = 0;
+        var checks = [source, destination];
+
         utxos.forEach(txn => {
 
             if (running_total < (100 + fee)) {
@@ -419,6 +422,9 @@ export default class Wallet extends React.Component {
 
         if ((running_total - (2730 + fee)) > 0) {
             tx.addOutput(source, (running_total - (2730 + fee)));
+        } else {
+            check++; // no need check for source
+            checks = [destination];
         }
 
         var SafexTransaction = {};
@@ -429,35 +435,29 @@ export default class Wallet extends React.Component {
             .then((resp) => {
                 var decoded_txn = bitcoin.Transaction.fromHex(resp);
                 var txn = bitcoin.TransactionBuilder.fromTransaction(decoded_txn);
-                var check = 0;
-
-                txn.tx.outs.forEach(out => {
-                    if (check === 0) {
-                        var pubkey = bitcoin.address.fromOutputScript(out.script, bitcoin.networks.livenet);
-                        if (pubkey === destination) {
-                            check += 1;
+                checks.forEach(function(item) {
+                    txn.tx.outs.some(out => {
+                        try {
+                            var pubkey = bitcoin.address.fromOutputScript(out.script, bitcoin.networks.livenet);
+                        } catch (e) {
+                            console.log(e);
                         }
-                    } else if (check === 1) {
-                        var pubkey = bitcoin.address.fromOutputScript(out.script, bitcoin.networks.livenet);
-                        if (pubkey === source) {
+                        if (pubkey === item) {
                             check += 1;
+                            return;
                         }
-                    }
+                    });
                 });
 
                 if (check === 2) {
                     for (var i = 0; i < inputs_num; i++) {
                         txn.sign(i, key);
                     }
-
-
                     var json = {};
                     json['rawtx'] = txn.build().toHex();
-
                     fetch('http://omni.safex.io:3001/broadcast', {method: "POST", body: JSON.stringify(json)})
                         .then(resp => resp.text())
                         .then((resp) => {
-
                             this.setState({
                                 transaction_sent: true,
                                 transaction_being_sent: false,
@@ -467,7 +467,6 @@ export default class Wallet extends React.Component {
                 } else {
                     alert("error with transaction")
                 }
-
             });
     }
 
