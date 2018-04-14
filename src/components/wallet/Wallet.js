@@ -73,6 +73,7 @@ export default class Wallet extends React.Component {
         this.openCoinModal = this.openCoinModal.bind(this);
         this.closeCoinModal = this.closeCoinModal.bind(this);
         this.openHistoryModal = this.openHistoryModal.bind(this);
+        this.showPrivateModal = this.showPrivateModal.bind(this);
         this.closeHistoryModal = this.closeHistoryModal.bind(this);
         this.sendAmountOnChange = this.sendAmountOnChange.bind(this);
         this.sendFeeOnChange = this.sendFeeOnChange.bind(this);
@@ -747,6 +748,10 @@ export default class Wallet extends React.Component {
         }
     }
 
+    showPrivateModal(e) {
+        alert("Keep your private key for yourself only!" + '\n' + '\n' + this.state.keys[e].private_key);
+    }
+
     openHistoryModal(e) {
         document.getElementById("history_txs").innerHTML = "loading...";
         this.setState({
@@ -1238,6 +1243,10 @@ export default class Wallet extends React.Component {
                             <button onClick={() => this.openHistoryModal(key)}
                                     className='archive-button history-button'>
                                 <span>HISTORY</span>
+                            </button>
+                            <button onClick={() => this.showPrivateModal(key)}
+                                    className='archive-button history-button'>
+                                <span>show private key</span>
                             </button>
 
 
