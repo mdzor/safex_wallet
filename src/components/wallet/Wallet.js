@@ -411,20 +411,19 @@ export default class Wallet extends React.Component {
         var checks = [source, destination];
 
         utxos.forEach(txn => {
-
-            if (running_total < (100 + fee)) {
+            if (running_total < (700 + fee)) {
                 running_total += txn.satoshis;
                 tx.addInput(txn.txid, txn.vout);
                 inputs_num += 1;
             }
         });
-        tx.addOutput(destination, 2730);
+        tx.addOutput(destination, 700);
 
-        if ((running_total - (2730 + fee)) > 0) {
-            tx.addOutput(source, (running_total - (2730 + fee)));
+        if ((running_total - (700 + fee)) > 0) {
+            tx.addOutput(source, (running_total - (700 + fee)));
         } else {
             check++; // no need check for source
-            checks = [destination];
+            checks = [destination]; 
         }
 
         var SafexTransaction = {};
